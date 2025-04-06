@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>موقع تشغيل الأكواد Offline</title>
+  <!-- CodeMirror CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css" />
+  <!-- CodeMirror Themes: default (Light) و dracula (Dark) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark {
+      background: #1e1e1e;
+      color: #ddd;
+    }
+    h2 {
+      text-align: center;
+    }
+    #controls {
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    #editorContainer {
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    #output {
+      background: #000;
+      color: #0f0;
+      padding: 10px;
+      margin-top: 10px;
+      height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+    button, select {
+      padding: 8px 12px;
+      margin: 5px;
+      font-size: 1rem;
+    }
+  </style>
+  <!-- Pyodide -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+  <!-- CodeMirror JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+  <!-- CodeMirror Modes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
+</head>
+<body>
+  <h2>موقع تشغيل الأكواد Offline</h2>
+  <div id="controls">
+    <select id="language">
+      <option value="python">Python</option>
+      <option value="javascript">JavaScript</option>
+    </select>
+    <button id="toggleTheme">تبديل السمة</button>
+    <button id="runBtn">تشغيل الكود</button>
+    <button id="clearOutput">مسح المخرجات</button>
+  </div>
+  
+  <!-- المحرر -->
+  <div id="editorContainer">
+    <textarea id="codeArea">print("مرحباً من Python!")</textarea>
+  </div>
+  
+  <!-- منطقة المخرجات -->
+  <div id="output"></div>
+  
+  <script>
+    // متغيرات الحالة
+    let currentTheme = localStorage.getItem("theme") || "light";
+    let editor, pyodide = null, pyodideReady = false;
+    
+    // تطبيق السمة المحفوظة
+    function applyTheme(theme) {
+      if (theme === "dark") {
+        document.body.classList.add("dark");
+        // تغيير سمة CodeMirror إلى dracula
+        if(editor) editor.setOption("theme", "dracula");
+      } else {
+        document.body.classList.remove("dark");
+        if(editor) editor.setOption("theme", "default");
+      }
+      localStorage.setItem("theme", theme);
+    }
+    
+    // تبديل السمة
+    document.getElementById("toggleTheme").addEventListener("click", () => {
+      currentTheme = currentTheme === "light" ? "dark" : "light";
+      applyTheme(currentTheme);
+    });
+    
+    // تهيئة CodeMirror
+    function initEditor() {
+      editor = CodeMirror.fromTextArea(document.getElementById("codeArea"), {
+        lineNumbers: true,
+        mode: "python",
+        theme: currentTheme === "dark" ? "dracula" : "default",
+        indentUnit: 4,
+        tabSize: 4
+      });
+      // تحميل الكود المخزن للمستخدم عند التغيير بين اللغات
+      const lang = document.getElementById("language").value;
+      const savedCode = localStorage.getItem("code_" + lang);
+      if(savedCode) {
+        editor.setValue(savedCode);
+      }
+      // حفظ الكود تلقائيًا عند التغيير
+      editor.on("change", () => {
+        localStorage.setItem("code_" + document.getElementById("language").value, editor.getValue());
+      });
+    }
+    
+    // تغيير وضع اللغة وتحميل الكود الخاص بكل لغة
+    document.getElementById("language").addEventListener("change", (e) => {
+      const lang = e.target.value;
+      editor.setOption("mode", lang === "python" ? "python" : "javascript");
+      const savedCode = localStorage.getItem("code_" + lang);
+      if(savedCode) {
+        editor.setValue(savedCode);
+      } else {
+        // تعيين كود افتراضي لكل لغة
+        if(lang === "python"){
+          editor.setValue('print("مرحباً من Python!")');
+        } else {
+          editor.setValue('console.log("مرحباً من JavaScript!");');
+        }
+      }
+    });
+    
+    // تهيئة Pyodide لتشغيل Python
+    async function loadPyodideLib() {
+      pyodide = await loadPyodide();
+      pyodideReady = true;
+    }
+    loadPyodideLib();
+    
+    // دالة تشغيل الكود
+    async function runCode() {
+      const lang = document.getElementById("language").value;
+      const code = editor.getValue();
+      const outputDiv = document.getElementById("output");
+      outputDiv.innerText = "تشغيل الكود...";
+      
+      if(lang === "javascript") {
+        try {
+          const result = eval(code);
+          outputDiv.innerText = result !== undefined ? result : "تم التنفيذ.";
+        } catch (e) {
+          outputDiv.innerText = "خطأ: " + e;
+        }
+      } else if(lang === "python") {
+        if(!pyodideReady) {
+          outputDiv.innerText = "تحميل Python ...";
+          return;
+        }
+        try {
+          // إعادة توجيه مخرجات stdout
+          pyodide.runPython(`
+import sys
+from io import StringIO
+_backup_stdout = sys.stdout
+sys.stdout = StringIO()
+`);
+          await pyodide.runPythonAsync(code);
+          const output = pyodide.runPython("sys.stdout.getvalue()");
+          // إعادة stdout إلى وضعه الافتراضي
+          pyodide.runPython("sys.stdout = _backup_stdout");
+          outputDiv.innerText = output || "تم التنفيذ.";
+        } catch (e) {
+          outputDiv.innerText = "خطأ: " + e;
+        }
+      }
+    }
+    
+    // زر التشغيل
+    document.getElementById("runBtn").addEventListener("click", runCode);
+    
+    // زر مسح المخرجات
+    document.getElementById("clearOutput").addEventListener("click", () => {
+      document.getElementById("output").innerText = "";
+    });
+    
+    // تهيئة الصفحة
+    window.onload = () => {
+      applyTheme(currentTheme);
+      initEditor();
+    };
+  </script>
+</body>
+</html>
