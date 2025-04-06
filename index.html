@@ -2,205 +2,199 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>محرر بايثون بدون سيرفر</title>
-  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css">
-  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>موقع تشغيل الأكواد Offline</title>
+  <!-- CodeMirror CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css" />
+  <!-- CodeMirror Themes: default (Light) و dracula (Dark) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css" />
   <style>
     body {
-      background-color: #0d1117;
-      color: #c9d1d9;
-      font-family: 'Segoe UI', sans-serif;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
       margin: 0;
-      padding: 0;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 30px auto;
       padding: 20px;
-      background-color: #161b22;
-      border-radius: 12px;
-      box-shadow: 0 0 20px #000;
+      transition: background 0.3s, color 0.3s;
     }
-
-    h1, h3 {
+    body.dark {
+      background: #1e1e1e;
+      color: #ddd;
+    }
+    h2 {
       text-align: center;
-      margin-bottom: 20px;
     }
-
-    textarea, #libraryInput, #userInput {
-      width: 100%;
-      background-color: #0d1117;
+    #controls {
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    #editorContainer {
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    #output {
+      background: #000;
       color: #0f0;
-      border: 1px solid #30363d;
-      padding: 15px;
-      font-size: 16px;
-      border-radius: 8px;
-      resize: vertical;
-    }
-
-    textarea {
-      height: 250px;
-    }
-
-    #libraryInput, #userInput {
-      color: #c9d1d9;
-      padding: 12px;
-    }
-
-    button, input[type="file"] {
-      display: block;
-      width: 100%;
-      margin: 10px 0;
-      padding: 12px;
-      font-size: 16px;
-      background-color: #238636;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    button:hover {
-      background-color: #2ea043;
-    }
-
-    pre {
-      background-color: #0d1117;
-      border: 1px solid #30363d;
-      padding: 15px;
-      border-radius: 8px;
-      color: #58a6ff;
+      padding: 10px;
+      margin-top: 10px;
+      height: 150px;
+      overflow-y: auto;
       white-space: pre-wrap;
-      word-break: break-word;
+      font-family: monospace;
     }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-direction: column;
-    }
-
-    @media (min-width: 600px) {
-      .actions {
-        flex-direction: row;
-      }
+    button, select {
+      padding: 8px 12px;
+      margin: 5px;
+      font-size: 1rem;
     }
   </style>
+  <!-- Pyodide -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+  <!-- CodeMirror JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+  <!-- CodeMirror Modes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>محرر وتشغيل كود بايثون (بدون سيرفر)</h1>
-
-    <!-- حقل إضافة المكتبات -->
-    <div class="actions">
-      <input type="text" id="libraryInput" placeholder="أدخل اسم المكتبة (مثل: telebot)">
-      <button onclick="addLibrary()">إضافة مكتبة</button>
-    </div>
-
-    <div class="actions">
-      <input type="file" id="fileInput" accept=".py">
-      <button onclick="saveCode()">حفظ الكود كملف .py</button>
-    </div>
-
-    <textarea id="code">print("مرحبًا بك في PyScript!")</textarea>
-
-    <button onclick="runCode()">تشغيل الكود</button>
-
-    <!-- حقل للإدخال التفاعلي -->
-    <h3>الإدخال (إذا كان الكود يحتاج إدخال):</h3>
-    <input type="text" id="userInput" placeholder="أدخل قيمة هنا">
-    <button onclick="submitInput()">إرسال الإدخال</button>
-
-    <h3>الناتج:</h3>
-    <pre id="output"></pre>
-    <pre id="error" style="color: #ff5555;"></pre>
-
-    <py-env id="pyEnv">
-      - numpy
-    </py-env>
-
-    <py-script id="runner" output="output">
-print("مرحبًا من PyScript")
-    </py-script>
+  <h2>موقع تشغيل الأكواد Offline</h2>
+  <div id="controls">
+    <select id="language">
+      <option value="python">Python</option>
+      <option value="javascript">JavaScript</option>
+    </select>
+    <button id="toggleTheme">تبديل السمة</button>
+    <button id="runBtn">تشغيل الكود</button>
+    <button id="clearOutput">مسح المخرجات</button>
   </div>
-
+  
+  <!-- المحرر -->
+  <div id="editorContainer">
+    <textarea id="codeArea">print("مرحباً من Python!")</textarea>
+  </div>
+  
+  <!-- منطقة المخرجات -->
+  <div id="output"></div>
+  
   <script>
-    let userInputValue = "";
-
-    async function runCode() {
-      const code = document.getElementById("code").value;
-      const output = document.getElementById("output");
-      const error = document.getElementById("error");
-      output.innerHTML = "";
-      error.innerHTML = "";
-
-      try {
-        let pyodide = await window.loadPyodide();
-        pyodide.runPython(`
-import sys
-import js
-
-class CustomStdout:
-    def write(self, text):
-        js.document.getElementById("output").innerHTML += text
-    def flush(self):
-        pass
-
-sys.stdout = CustomStdout()
-sys.stderr = CustomStdout()
-        `);
-
-        await pyodide.runPythonAsync(code);
-      } catch (err) {
-        error.innerHTML = err.toString();
+    // متغيرات الحالة
+    let currentTheme = localStorage.getItem("theme") || "light";
+    let editor, pyodide = null, pyodideReady = false;
+    
+    // تطبيق السمة المحفوظة
+    function applyTheme(theme) {
+      if (theme === "dark") {
+        document.body.classList.add("dark");
+        // تغيير سمة CodeMirror إلى dracula
+        if(editor) editor.setOption("theme", "dracula");
+      } else {
+        document.body.classList.remove("dark");
+        if(editor) editor.setOption("theme", "default");
       }
+      localStorage.setItem("theme", theme);
     }
-
-    function submitInput() {
-      userInputValue = document.getElementById("userInput").value;
-      document.getElementById("userInput").value = "";
+    
+    // تبديل السمة
+    document.getElementById("toggleTheme").addEventListener("click", () => {
+      currentTheme = currentTheme === "light" ? "dark" : "light";
+      applyTheme(currentTheme);
+    });
+    
+    // تهيئة CodeMirror
+    function initEditor() {
+      editor = CodeMirror.fromTextArea(document.getElementById("codeArea"), {
+        lineNumbers: true,
+        mode: "python",
+        theme: currentTheme === "dark" ? "dracula" : "default",
+        indentUnit: 4,
+        tabSize: 4
+      });
+      // تحميل الكود المخزن للمستخدم عند التغيير بين اللغات
+      const lang = document.getElementById("language").value;
+      const savedCode = localStorage.getItem("code_" + lang);
+      if(savedCode) {
+        editor.setValue(savedCode);
+      }
+      // حفظ الكود تلقائيًا عند التغيير
+      editor.on("change", () => {
+        localStorage.setItem("code_" + document.getElementById("language").value, editor.getValue());
+      });
     }
-
-    window.prompt = function() {
-      return userInputValue;
-    };
-
-    document.getElementById("fileInput").addEventListener("change", function(event) {
-      const file = event.target.files[0];
-      if (file && file.name.endsWith(".py")) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          document.getElementById("code").value = e.target.result;
-        };
-        reader.readAsText(file);
+    
+    // تغيير وضع اللغة وتحميل الكود الخاص بكل لغة
+    document.getElementById("language").addEventListener("change", (e) => {
+      const lang = e.target.value;
+      editor.setOption("mode", lang === "python" ? "python" : "javascript");
+      const savedCode = localStorage.getItem("code_" + lang);
+      if(savedCode) {
+        editor.setValue(savedCode);
+      } else {
+        // تعيين كود افتراضي لكل لغة
+        if(lang === "python"){
+          editor.setValue('print("مرحباً من Python!")');
+        } else {
+          editor.setValue('console.log("مرحباً من JavaScript!");');
+        }
       }
     });
-
-    function saveCode() {
-      const code = document.getElementById("code").value;
-      const blob = new Blob([code], { type: "text/x-python" });
-      const link = document.createElement("a");
-      link.download = "script.py";
-      link.href = URL.createObjectURL(blob);
-      link.click();
+    
+    // تهيئة Pyodide لتشغيل Python
+    async function loadPyodideLib() {
+      pyodide = await loadPyodide();
+      pyodideReady = true;
     }
-
-    function addLibrary() {
-      const libraryInput = document.getElementById("libraryInput").value.trim();
-      if (libraryInput === "") {
-        alert("يرجى إدخال اسم مكتبة!");
-        return;
+    loadPyodideLib();
+    
+    // دالة تشغيل الكود
+    async function runCode() {
+      const lang = document.getElementById("language").value;
+      const code = editor.getValue();
+      const outputDiv = document.getElementById("output");
+      outputDiv.innerText = "تشغيل الكود...";
+      
+      if(lang === "javascript") {
+        try {
+          const result = eval(code);
+          outputDiv.innerText = result !== undefined ? result : "تم التنفيذ.";
+        } catch (e) {
+          outputDiv.innerText = "خطأ: " + e;
+        }
+      } else if(lang === "python") {
+        if(!pyodideReady) {
+          outputDiv.innerText = "تحميل Python ...";
+          return;
+        }
+        try {
+          // إعادة توجيه مخرجات stdout
+          pyodide.runPython(`
+import sys
+from io import StringIO
+_backup_stdout = sys.stdout
+sys.stdout = StringIO()
+`);
+          await pyodide.runPythonAsync(code);
+          const output = pyodide.runPython("sys.stdout.getvalue()");
+          // إعادة stdout إلى وضعه الافتراضي
+          pyodide.runPython("sys.stdout = _backup_stdout");
+          outputDiv.innerText = output || "تم التنفيذ.";
+        } catch (e) {
+          outputDiv.innerText = "خطأ: " + e;
+        }
       }
-
-      const pyEnv = document.getElementById("pyEnv");
-      const currentContent = pyEnv.innerHTML.trim();
-      pyEnv.innerHTML = `${currentContent}\n    - ${libraryInput}`;
-
-      alert(`تمت إضافة المكتبة ${libraryInput}. يرجى إعادة تحميل الصفحة لتطبيق التغييرات.`);
-      location.reload();
     }
+    
+    // زر التشغيل
+    document.getElementById("runBtn").addEventListener("click", runCode);
+    
+    // زر مسح المخرجات
+    document.getElementById("clearOutput").addEventListener("click", () => {
+      document.getElementById("output").innerText = "";
+    });
+    
+    // تهيئة الصفحة
+    window.onload = () => {
+      applyTheme(currentTheme);
+      initEditor();
+    };
   </script>
 </body>
 </html>
