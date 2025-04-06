@@ -137,8 +137,7 @@ print("مرحبًا من PyScript")
       error.innerHTML = "";
 
       try {
-        let pyodide = await window.loadPyodide();
-        pyodide.runPython(`
+        await window.pyscript.interpreter.runPython(`
 import sys
 import js
 
@@ -152,7 +151,7 @@ sys.stdout = CustomStdout()
 sys.stderr = CustomStdout()
         `);
 
-        await pyodide.runPythonAsync(code);
+        await window.pyscript.interpreter.runPython(code);
       } catch (err) {
         error.innerHTML = err.toString();
       }
